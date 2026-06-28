@@ -179,20 +179,20 @@
        created_at: new Date().toISOString(),
      };
      setRecords(c => [item, ...c]);
-     if (supabase && userId) await supabase.from("activity_records").insert({ ...item, user_id: userId }).catch(() => {});
-   }
+     if (supabase && userId) { try { await supabase.from("activity_records").insert({ ...item, user_id: userId }); } catch (_) {} }
+  }
  
-   async function addSpend() {
-     const amount = clampNumber(Math.floor(Number(spendMinutes)), 1, 1440);
-     const item: EntertainmentSpend = { id: crypto.randomUUID(), user_id: userId || undefined, profile_id: userId || "", minutes: amount, created_at: new Date().toISOString() };
-     setSpends(c => [item, ...c]); setSpendMinutes("");
-     if (supabase && userId) await supabase.from("entertainment_spends").insert({ ...item, user_id: userId }).catch(() => {});
-   }
+  async function addSpend() {
+    const amount = clampNumber(Math.floor(Number(spendMinutes)), 1, 1440);
+    const item: EntertainmentSpend = { id: crypto.randomUUID(), user_id: userId || undefined, profile_id: userId || "", minutes: amount, created_at: new Date().toISOString() };
+    setSpends(c => [item, ...c]); setSpendMinutes("");
+     if (supabase && userId) { try { await supabase.from("entertainment_spends").insert({ ...item, user_id: userId }); } catch (_) {} }
+  }
  
-   async function deleteRecord(id: string) {
-     setRecords(c => c.filter(i => i.id !== id));
-     if (supabase) await supabase.from("activity_records").delete().eq("id", id).catch(() => {});
-   }
+  async function deleteRecord(id: string) {
+    setRecords(c => c.filter(i => i.id !== id));
+     if (supabase) { try { await supabase.from("activity_records").delete().eq("id", id); } catch (_) {} }
+  }
  
    async function handleAddCategory() {
      if (!newCatName.trim() || !supabase || !userId) return;
