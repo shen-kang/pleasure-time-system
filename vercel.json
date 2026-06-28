@@ -1,1 +1,5 @@
-{"git":{"productionBranch":"main"}}
+ {
+   "git": {
+     "productionBranch": "main"
+   }
+ }
