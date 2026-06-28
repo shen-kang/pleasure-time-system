@@ -38,19 +38,20 @@
  
    // ---------- auth ----------
    useEffect(() => {
-     if (!supabase) { setAuthLoading(false); return; }
-     supabase.auth.getSession().then(({ data: { session } }) => {
+     const client = supabase;
+     if (!client) { setAuthLoading(false); return; }
+     client.auth.getSession().then(({ data: { session } }) => {
        if (!session) { router.replace("/login"); return; }
        setUserId(session.user.id);
        setUserEmail(session.user.email || "");
        setAuthLoading(false);
      });
-     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+     const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
        if (!session) router.replace("/login"); else { setUserId(session.user.id); setUserEmail(session.user.email || ""); }
      });
      return () => subscription.unsubscribe();
    }, []);
- 
+
    // ---------- state ----------
    const [categories, setCategories] = useState<UserCategory[]>([]);
    const [records, setRecords] = useState<ActivityRecord[]>([]);
@@ -69,45 +70,47 @@
  
    // ---------- load categories ----------
    useEffect(() => {
-     if (!userId || !supabase) return;
+     const catClient = supabase;
+     if (!userId || !catClient) return;
      (async () => {
-       const { data } = await supabase.from("categories").select("*").eq("user_id", userId).order("created_at");
+       const { data } = await catClient.from("categories").select("*").eq("user_id", userId).order("created_at");
        if (data && data.length > 0) {
          setCategories(data);
        } else {
          const defaults: UserCategory[] = colorPalette.slice(0, 5).map((c, i) => ({
            id: crypto.randomUUID(), name: ["投资","套利","健身","羽毛球","阅读"][i], color: c, created_at: new Date().toISOString(),
          }));
-         await supabase.from("categories").insert(defaults.map(d => ({ ...d, user_id: userId })));
+         await catClient.from("categories").insert(defaults.map(d => ({ ...d, user_id: userId })));
          setCategories(defaults);
        }
      })();
    }, [userId]);
- 
+
    useEffect(() => { if (categories.length > 0 && !selectedCat) setSelectedCat(categories[0].name); }, [categories]);
  
    // ---------- load records ----------
    useEffect(() => {
-     if (!userId || !supabase) return;
+     const recClient = supabase;
+     if (!userId || !recClient) return;
      setSyncState("cloud");
      const rk = recordStoragePrefix + userId, sk = spendStoragePrefix + userId;
      setRecords(readLocal(rk, [])); setSpends(readLocal(sk, []));
  
      const load = async () => {
        const [{ data: rd }, { data: sd }] = await Promise.all([
-         supabase.from("activity_records").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
-         supabase.from("entertainment_spends").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+         recClient.from("activity_records").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+         recClient.from("entertainment_spends").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
        ]);
        if (rd) { setRecords(rd as ActivityRecord[]); writeLocal(rk, rd); }
        if (sd) { setSpends(sd as EntertainmentSpend[]); writeLocal(sk, sd); }
      };
      load();
  
-     const channel = supabase.channel(`pleasure-${userId}`)
+     const channel = recClient.channel(`pleasure-${userId}`)
        .on("postgres_changes", { event: "*", schema: "public", table: "activity_records", filter: `user_id=eq.${userId}` }, load)
        .on("postgres_changes", { event: "*", schema: "public", table: "entertainment_spends", filter: `user_id=eq.${userId}` }, load)
        .subscribe();
-     return () => { supabase.removeChannel(channel); };
+     return () => { recClient.removeChannel(channel); };
    }, [userId]);
  
    // ---------- persist to localStorage ----------
