@@ -65,7 +65,7 @@
    const [syncState, setSyncState] = useState<"cloud" | "local">("local");
    const [showCatModal, setShowCatModal] = useState(false);
    const [newCatName, setNewCatName] = useState("");
-   const [newCatColor, setNewCatColor] = useState(colorPalette[0]);
+   const [newCatColor, setNewCatColor] = useState<string>(colorPalette[0]);
    const [catMsg, setCatMsg] = useState("");
  
    // ---------- load categories ----------
