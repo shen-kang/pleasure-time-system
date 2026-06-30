@@ -173,7 +173,7 @@ export default function Home() {
     return records.filter(r => !isAfter(start, parseISO(r.created_at))).reduce((s, r) => s + r.points, 0);
   }, [records]);
 
-  // Daily target calculation
+  // v2: Daily target calculation
   const targetGap = useMemo(() => {
     const now = new Date();
     const weekStart = startOfWeek(now, { weekStartsOn: 1 });
