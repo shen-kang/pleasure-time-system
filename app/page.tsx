@@ -82,6 +82,7 @@ export default function Home() {
   const [newCatName, setNewCatName] = useState("");
   const [newCatColor, setNewCatColor] = useState<string>(colorPalette[0]);
   const [catMsg, setCatMsg] = useState("");
+  const [highlightedLine, setHighlightedLine] = useState<string | null>(null);
 
   // ---------- toast ----------
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
@@ -229,7 +230,10 @@ export default function Home() {
       const entMins = spends.filter(s => { const c = parseISO(s.created_at); return !isAfter(start, c) && !isAfter(c, next); })
         .filter(s => period === "year" ? parseISO(s.created_at).getMonth() === i : isSameDay(parseISO(s.created_at), date))
         .reduce((s, r) => s + r.minutes, 0);
-      return { label: chartLabel(date, period), 积分: Number(pts.toFixed(1)), 娱乐: Number((entMins / 60).toFixed(2)) };
+      const earnedMins = records.filter(r => { const c = parseISO(r.created_at); return !isAfter(start, c) && !isAfter(c, next); })
+        .filter(r => period === "year" ? parseISO(r.created_at).getMonth() === i : isSameDay(parseISO(r.created_at), date))
+        .reduce((s, r) => s + r.earned_minutes, 0);
+      return { label: chartLabel(date, period), 积分: Number(pts.toFixed(1)), 娱乐: Number((entMins / 60).toFixed(2)), 剩余: Number(((earnedMins - entMins) / 60).toFixed(2)) };
     });
   }, [period, records, spends]);
 
@@ -377,17 +381,23 @@ export default function Home() {
 
         {/* ===== Left Column ===== */}
         <section className="flex min-w-0 flex-col gap-4">
-          <div className="rounded-[28px] bg-ink p-5 text-white shadow-soft">
-            <div className="mb-4 flex items-center justify-between">
+                    <div className="rounded-[28px] bg-ink p-5 text-white shadow-soft">
+            <div className="grid grid-cols-[1fr_auto] gap-4">
               <div className="min-w-0">
                 <p className="text-sm text-white/65">当前可用娱乐时间</p>
-                <h1 className="mt-1 text-5xl font-semibold tracking-normal">{Math.floor(totals.balance)}</h1>
+                <div className="mt-1 flex items-baseline gap-1.5">
+                  <span className="text-5xl font-semibold tracking-normal">{Math.floor(totals.balance)}</span>
+                  <span className="text-sm text-white/50">分钟</span>
+                </div>
               </div>
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/12"><WalletCards size={24} /></div>
+              <div className="shrink-0 rounded-2xl bg-white/10 px-4 py-3">
+                <p className="text-xs text-white/60">今日已娱乐</p>
+                <p className="mt-0.5 text-lg font-semibold">{todayEntertainment.todayHours} 小时</p>
+                <p className="mt-0.5 text-xs text-white/40">周均{todayEntertainment.weekAvgHours}h | 月均{todayEntertainment.monthAvgHours}h</p>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
               <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">今日积分</p><p className="mt-1 text-xl font-semibold">{totals.todayPoints.toFixed(1)}</p><p className={`mt-0.5 text-xs ${targetGap.todayGap >= 0 ? "text-green-400" : "text-coral"}`}>{targetGap.todayGap >= 0 ? "+" : ""}{targetGap.todayGap.toFixed(1)} (目标 {DAILY_TARGET})</p></div>
-              <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">今日已娱乐</p><p className="mt-1 text-xl font-semibold">{todayEntertainment.todayHours} 小时</p><p className="mt-0.5 text-xs text-white/50">周均 {todayEntertainment.weekAvgHours}h | 月均 {todayEntertainment.monthAvgHours}h</p></div>
               <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">本周积分</p><p className="mt-1 text-xl font-semibold">{weekPoints.toFixed(1)}</p><p className={`mt-0.5 text-xs ${targetGap.weekGap >= 0 ? "text-green-400" : "text-coral"}`}>{targetGap.weekGap >= 0 ? "+" : ""}{targetGap.weekGap.toFixed(1)} (目标 {targetGap.weekExpected.toFixed(0)})</p></div>
               <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">本月积分</p><p className="mt-1 text-xl font-semibold">{monthPoints.toFixed(1)}</p><p className={`mt-0.5 text-xs ${targetGap.monthGap >= 0 ? "text-green-400" : "text-coral"}`}>{targetGap.monthGap >= 0 ? "+" : ""}{targetGap.monthGap.toFixed(1)} (目标 {targetGap.monthExpected.toFixed(0)})</p></div>
             </div>
@@ -445,8 +455,10 @@ export default function Home() {
                   <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
                   <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} label={{ value: '小时', angle: -90, position: 'insideRight', offset: 2 }} />
                   <Tooltip />
-                  <Line yAxisId="left" type="monotone" dataKey="积分" stroke="#0EA5A4" strokeWidth={3} dot={false} name="积分" />
-                  <Line yAxisId="right" type="monotone" dataKey="娱乐" stroke="#F9735B" strokeWidth={2} dot={false} name="娱乐(小时)" />
+                  <Legend onMouseEnter={(e: any) => setHighlightedLine(e.dataKey)} onMouseLeave={() => setHighlightedLine(null)} />
+                  <Line yAxisId="left" type="monotone" dataKey="积分" stroke="#0EA5A4" strokeWidth={3} dot={false} name="积分" strokeOpacity={highlightedLine === null || highlightedLine === "积分" ? 1 : 0.15} />
+                  <Line yAxisId="right" type="monotone" dataKey="娱乐" stroke="#F9735B" strokeWidth={2} dot={false} name="娱乐(小时)" strokeOpacity={highlightedLine === null || highlightedLine === "娱乐(小时)" ? 1 : 0.15} />
+                  <Line yAxisId="right" type="monotone" dataKey="剩余" stroke="#16A34A" strokeWidth={2} dot={false} name="剩余(小时)" strokeOpacity={highlightedLine === null || highlightedLine === "剩余(小时)" ? 1 : 0.15} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
