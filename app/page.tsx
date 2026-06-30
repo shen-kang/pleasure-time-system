@@ -226,9 +226,12 @@ export default function Home() {
       const pts = records.filter(r => { const c = parseISO(r.created_at); return !isAfter(start, c) && !isAfter(c, next); })
         .filter(r => period === "year" ? parseISO(r.created_at).getMonth() === i : isSameDay(parseISO(r.created_at), date))
         .reduce((s, r) => s + r.points, 0);
-      return { label: chartLabel(date, period), 积分: Number(pts.toFixed(1)) };
+      const entMins = spends.filter(s => { const c = parseISO(s.created_at); return !isAfter(start, c) && !isAfter(c, next); })
+        .filter(s => period === "year" ? parseISO(s.created_at).getMonth() === i : isSameDay(parseISO(s.created_at), date))
+        .reduce((s, r) => s + r.minutes, 0);
+      return { label: chartLabel(date, period), 积分: Number(pts.toFixed(1)), 娱乐: Number((entMins / 60).toFixed(2)) };
     });
-  }, [period, records]);
+  }, [period, records, spends]);
 
   const categoryData = useMemo(() =>
     categories.map(c => ({ name: c.name, value: Number(records.filter(r => r.category === c.name).reduce((s, r) => s + r.decimal_hours, 0).toFixed(2)), color: c.color })),
@@ -436,12 +439,14 @@ export default function Home() {
             </div>
             <div className="h-56 w-full">
               <ResponsiveContainer>
-                <LineChart data={trendData} margin={{ top: 12, right: 8, left: -24, bottom: 0 }}>
+                <LineChart data={trendData} margin={{ top: 12, right: 4, left: -24, bottom: 0 }}>
                   <CartesianGrid stroke="#DDE3EA" strokeDasharray="4 4" />
                   <XAxis dataKey="label" tick={{ fontSize: 11 }} interval={period === "month" ? 5 : 0} />
-                  <YAxis tick={{ fontSize: 11 }} />
+                  <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} label={{ value: '小时', angle: -90, position: 'insideRight', offset: 2 }} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="积分" stroke="#0EA5A4" strokeWidth={3} dot={false} />
+                  <Line yAxisId="left" type="monotone" dataKey="积分" stroke="#0EA5A4" strokeWidth={3} dot={false} name="积分" />
+                  <Line yAxisId="right" type="monotone" dataKey="娱乐" stroke="#F9735B" strokeWidth={2} dot={false} name="娱乐(小时)" />
                 </LineChart>
               </ResponsiveContainer>
             </div>
