@@ -233,7 +233,7 @@ export default function Home() {
       const earnedMins = records.filter(r => { const c = parseISO(r.created_at); return !isAfter(start, c) && !isAfter(c, next); })
         .filter(r => period === "year" ? parseISO(r.created_at).getMonth() === i : isSameDay(parseISO(r.created_at), date))
         .reduce((s, r) => s + r.earned_minutes, 0);
-      return { label: chartLabel(date, period), 积分: Number(pts.toFixed(1)), 娱乐: Number((entMins / 60).toFixed(2)), 剩余: Number(((earnedMins - entMins) / 60).toFixed(2)) };
+      return { label: chartLabel(date, period), 积分: Number(pts.toFixed(1)), 娱乐: Number((entMins / 60).toFixed(2)), 储藏: Number(((earnedMins - entMins) / 60).toFixed(2)) };
     });
   }, [period, records, spends]);
 
@@ -455,10 +455,10 @@ export default function Home() {
                   <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
                   <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} label={{ value: '小时', angle: -90, position: 'insideRight', offset: 2 }} />
                   <Tooltip />
-                  <Legend onMouseEnter={(e: any) => setHighlightedLine(e.dataKey)} onMouseLeave={() => setHighlightedLine(null)} />
+                  <Legend onMouseEnter={(e: any) => setHighlightedLine(e.value)} onMouseLeave={() => setHighlightedLine(null)} />
                   <Line yAxisId="left" type="monotone" dataKey="积分" stroke="#0EA5A4" strokeWidth={3} dot={false} name="积分" strokeOpacity={highlightedLine === null || highlightedLine === "积分" ? 1 : 0.15} />
                   <Line yAxisId="right" type="monotone" dataKey="娱乐" stroke="#F9735B" strokeWidth={2} dot={false} name="娱乐(小时)" strokeOpacity={highlightedLine === null || highlightedLine === "娱乐(小时)" ? 1 : 0.15} />
-                  <Line yAxisId="right" type="monotone" dataKey="剩余" stroke="#16A34A" strokeWidth={2} dot={false} name="剩余(小时)" strokeOpacity={highlightedLine === null || highlightedLine === "剩余(小时)" ? 1 : 0.15} />
+                  <Line yAxisId="right" type="monotone" dataKey="储藏" stroke="#16A34A" strokeWidth={2} dot={false} name="储藏(小时)" strokeOpacity={highlightedLine === null || highlightedLine === "储藏(小时)" ? 1 : 0.15} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
