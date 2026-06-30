@@ -186,6 +186,37 @@ export default function Home() {
     return { weekGap, monthGap, weekExpected, monthExpected, todayGap };
   }, [weekPoints, monthPoints, totals.todayPoints]);
 
+  // Entertainment time calculations (takes spend minutes, converts to hours)
+  const todayEntertainment = useMemo(() => {
+    const now = new Date();
+    const yesterday = addDays(now, -1);
+    // Today's entertainment (spend minutes converted to hours)
+    const todayMins = spends
+      .filter(s => isSameDay(parseISO(s.created_at), now))
+      .reduce((s, i) => s + i.minutes, 0);
+    const todayHours = Number((todayMins / 60).toFixed(1));
+
+    // Weekly average daily entertainment (past 7 days, excluding today)
+    const weekAgo = addDays(now, -7);
+    const weekSpends = spends.filter(s => {
+      const d = parseISO(s.created_at);
+      return d > weekAgo && d <= yesterday;
+    });
+    const weekTotalMins = weekSpends.reduce((s, i) => s + i.minutes, 0);
+    const weekAvgHours = Number((weekTotalMins / 60 / 7).toFixed(2));
+
+    // Monthly average daily entertainment (past 30 days, excluding today)
+    const monthAgo = addDays(now, -30);
+    const monthSpends = spends.filter(s => {
+      const d = parseISO(s.created_at);
+      return d > monthAgo && d <= yesterday;
+    });
+    const monthTotalMins = monthSpends.reduce((s, i) => s + i.minutes, 0);
+    const monthAvgHours = Number((monthTotalMins / 60 / 30).toFixed(2));
+
+    return { todayHours, weekAvgHours, monthAvgHours };
+  }, [spends]);
+
   const trendData = useMemo(() => {
     const start = periodStart(period);
     const days = period === "week" ? 7 : period === "month" ? 31 : 12;
@@ -353,7 +384,7 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">今日积分</p><p className="mt-1 text-xl font-semibold">{totals.todayPoints.toFixed(1)}</p><p className={`mt-0.5 text-xs ${targetGap.todayGap >= 0 ? "text-green-400" : "text-coral"}`}>{targetGap.todayGap >= 0 ? "+" : ""}{targetGap.todayGap.toFixed(1)} (目标 {DAILY_TARGET})</p></div>
-              <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">今日已娱乐</p><p className="mt-1 text-xl font-semibold">{totals.todayHours.toFixed(1)} 小时</p><p className="mt-0.5 text-xs text-white/40">今日累计时间</p></div>
+              <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">今日已娱乐</p><p className="mt-1 text-xl font-semibold">{todayEntertainment.todayHours} 小时</p><p className="mt-0.5 text-xs text-white/50">周均 {todayEntertainment.weekAvgHours}h | 月均 {todayEntertainment.monthAvgHours}h</p></div>
               <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">本周积分</p><p className="mt-1 text-xl font-semibold">{weekPoints.toFixed(1)}</p><p className={`mt-0.5 text-xs ${targetGap.weekGap >= 0 ? "text-green-400" : "text-coral"}`}>{targetGap.weekGap >= 0 ? "+" : ""}{targetGap.weekGap.toFixed(1)} (目标 {targetGap.weekExpected.toFixed(0)})</p></div>
               <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">本月积分</p><p className="mt-1 text-xl font-semibold">{monthPoints.toFixed(1)}</p><p className={`mt-0.5 text-xs ${targetGap.monthGap >= 0 ? "text-green-400" : "text-coral"}`}>{targetGap.monthGap >= 0 ? "+" : ""}{targetGap.monthGap.toFixed(1)} (目标 {targetGap.monthExpected.toFixed(0)})</p></div>
             </div>
