@@ -182,8 +182,9 @@ export default function Home() {
     const monthExpected = DAILY_TARGET * daysMonth;
     const weekGap = Number((weekPoints - weekExpected).toFixed(1));
     const monthGap = Number((monthPoints - monthExpected).toFixed(1));
-    return { weekGap, monthGap, weekExpected, monthExpected };
-  }, [weekPoints, monthPoints]);
+    const todayGap = Number((totals.todayPoints - DAILY_TARGET).toFixed(1));
+    return { weekGap, monthGap, weekExpected, monthExpected, todayGap };
+  }, [weekPoints, monthPoints, totals.todayPoints]);
 
   const trendData = useMemo(() => {
     const start = periodStart(period);
@@ -343,7 +344,7 @@ export default function Home() {
         {/* ===== Left Column ===== */}
         <section className="flex min-w-0 flex-col gap-4">
           <div className="rounded-[28px] bg-ink p-5 text-white shadow-soft">
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between">
               <div className="min-w-0">
                 <p className="text-sm text-white/65">当前可用娱乐时间</p>
                 <h1 className="mt-1 text-5xl font-semibold tracking-normal">{Math.floor(totals.balance)}</h1>
@@ -351,14 +352,8 @@ export default function Home() {
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/12"><WalletCards size={24} /></div>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">累计赚取</p><p className="mt-1 text-xl font-semibold">{Math.floor(totals.earned)} 分钟</p></div>
-              <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">累计消耗</p><p className="mt-1 text-xl font-semibold">{Math.floor(totals.spent)} 分钟</p></div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white/10 px-3 py-2 text-sm text-white/72">
-              {syncState === "cloud" && hasSupabaseConfig ? <Wifi size={16} /> : <WifiOff size={16} />}
-              <span>{syncState === "cloud" && hasSupabaseConfig ? "实时同步已开启" : "本地模式"}</span>
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+              <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">今日积分</p><p className="mt-1 text-xl font-semibold">{totals.todayPoints.toFixed(1)}</p><p className={`mt-0.5 text-xs ${targetGap.todayGap >= 0 ? "text-green-400" : "text-coral"}`}>{targetGap.todayGap >= 0 ? "+" : ""}{targetGap.todayGap.toFixed(1)} (目标 {DAILY_TARGET})</p></div>
+              <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">今日已娱乐</p><p className="mt-1 text-xl font-semibold">{totals.todayHours.toFixed(1)} 小时</p><p className="mt-0.5 text-xs text-white/40">今日累计时间</p></div>
               <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">本周积分</p><p className="mt-1 text-xl font-semibold">{weekPoints.toFixed(1)}</p><p className={`mt-0.5 text-xs ${targetGap.weekGap >= 0 ? "text-green-400" : "text-coral"}`}>{targetGap.weekGap >= 0 ? "+" : ""}{targetGap.weekGap.toFixed(1)} (目标 {targetGap.weekExpected.toFixed(0)})</p></div>
               <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">本月积分</p><p className="mt-1 text-xl font-semibold">{monthPoints.toFixed(1)}</p><p className={`mt-0.5 text-xs ${targetGap.monthGap >= 0 ? "text-green-400" : "text-coral"}`}>{targetGap.monthGap >= 0 ? "+" : ""}{targetGap.monthGap.toFixed(1)} (目标 {targetGap.monthExpected.toFixed(0)})</p></div>
             </div>
@@ -400,10 +395,7 @@ export default function Home() {
 
         {/* ===== Right Column ===== */}
         <section className="flex min-w-0 flex-col gap-4">
-          <div className="grid grid-cols-2 gap-3">
-            <StatusCard icon={<Activity size={20} />} label="今日积分" value={totals.todayPoints.toFixed(1)} />
-            <StatusCard icon={<Clock3 size={20} />} label="今日活动" value={`${totals.todayHours.toFixed(1)} 小时`} />
-          </div>
+
 
           <Panel title="数据看板" icon={<BarChart3 size={20} />}>
             <div className="grid grid-cols-3 gap-2 rounded-2xl bg-mist p-1">
