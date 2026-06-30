@@ -200,23 +200,26 @@ export default function Home() {
       .reduce((s, i) => s + i.minutes, 0);
     const todayHours = Number((todayMins / 60).toFixed(1));
 
-    // Weekly average daily entertainment (past 7 days, excluding today)
-    const weekAgo = addDays(now, -7);
+    // Weekly average: past days this week (excluding today) / actual days
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+    const monthStart = startOfMonth(now);
+    const daysWeekPast = diffDays(yesterday, weekStart) + 1;
+    const daysMonthPast = diffDays(yesterday, monthStart) + 1;
+
     const weekSpends = spends.filter(s => {
       const d = parseISO(s.created_at);
-      return d > weekAgo && d <= yesterday;
+      return d > weekStart && d <= yesterday;
     });
     const weekTotalMins = weekSpends.reduce((s, i) => s + i.minutes, 0);
-    const weekAvgHours = Number((weekTotalMins / 60 / 7).toFixed(2));
+    const weekAvgHours = daysWeekPast > 0 ? Number((weekTotalMins / 60 / daysWeekPast).toFixed(2)) : 0;
 
-    // Monthly average daily entertainment (past 30 days, excluding today)
-    const monthAgo = addDays(now, -30);
+    // Monthly average: past days this month (excluding today) / actual days
     const monthSpends = spends.filter(s => {
       const d = parseISO(s.created_at);
-      return d > monthAgo && d <= yesterday;
+      return d > monthStart && d <= yesterday;
     });
     const monthTotalMins = monthSpends.reduce((s, i) => s + i.minutes, 0);
-    const monthAvgHours = Number((monthTotalMins / 60 / 30).toFixed(2));
+    const monthAvgHours = daysMonthPast > 0 ? Number((monthTotalMins / 60 / daysMonthPast).toFixed(2)) : 0;
 
     return { todayHours, weekAvgHours, monthAvgHours };
   }, [spends]);
