@@ -185,7 +185,9 @@ export default function Home() {
     const weekGap = Number((weekPoints - weekExpected).toFixed(1));
     const monthGap = Number((monthPoints - monthExpected).toFixed(1));
     const todayGap = Number((totals.todayPoints - DAILY_TARGET).toFixed(1));
-    return { weekGap, monthGap, weekExpected, monthExpected, todayGap };
+    const weekAvg = daysWeek > 0 ? Number((weekPoints / daysWeek).toFixed(1)) : 0;
+    const monthAvg = daysMonth > 0 ? Number((monthPoints / daysMonth).toFixed(1)) : 0;
+    return { weekGap, monthGap, todayGap, weekAvg, monthAvg };
   }, [weekPoints, monthPoints, totals.todayPoints]);
 
   // Entertainment time calculations (takes spend minutes, converts to hours)
@@ -419,13 +421,13 @@ export default function Home() {
               <NumberField label="分钟" value={minutes} onChange={setMinutes} min={0} max={59} />
             </div>
             <div className="rounded-3xl bg-mist p-4">
-              <div className="mb-3 flex items-center justify-between"><label className="text-sm font-semibold text-slate-600">专注评分</label><span className="text-2xl font-semibold">{focusScore}</span></div>
+              <div className="mb-3 flex items-center justify-between"><label className="text-sm font-semibold text-slate-600">状态评分</label><span className="text-2xl font-semibold">{focusScore}</span></div>
               <input className="h-10 w-full" type="range" min="0" max="20" value={focusScore} onChange={e => setFocusScore(Number(e.target.value))} />
             </div>
             <div className="grid grid-cols-3 gap-2 rounded-3xl border border-line p-3 text-center text-sm">
               <Metric label="小时" value={preview.decimal.toFixed(2)} />
               <Metric label="积分" value={preview.points.toFixed(1)} />
-              <Metric label="娱乐" value={`${preview.earned.toFixed(0)}分`} />
+              <Metric label="娱乐" value={`${preview.earned.toFixed(0)}分钟`} />
             </div>
             <button onClick={addRecord} className="h-14 rounded-2xl bg-aqua text-lg font-semibold text-white shadow-soft transition hover:brightness-110 active:scale-[0.97]">记录本次活动</button>
           </Panel>
