@@ -1,7 +1,7 @@
 "use client";
 
 import { addDays, endOfDay, format, isAfter, isSameDay, parseISO, startOfMonth, startOfWeek, startOfYear } from "date-fns";
-import { Activity, BarChart3, Clock3, Flame, LogOut, Plus, Settings, Trash2, WalletCards, Wifi, WifiOff } from "lucide-react";
+import { Activity, ArrowDown, ArrowUp, BarChart3, Clock3, Flame, LogOut, Plus, Settings, Trash2, WalletCards, Wifi, WifiOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -29,6 +29,19 @@ function chartLabel(date: Date, period: Period) {
   if (period === "month") return format(date, "MM/dd");
   return format(date, "MM月");
 }
+
+type HistoryItem = {
+  id: string;
+  kind: "activity" | "spend";
+  created_at: string;
+  category?: string;
+  hours?: number;
+  minutes?: number;
+  focus_score?: number;
+  points?: number;
+  earned_minutes?: number;
+  amount?: number;
+};
 
 export default function Home() {
   const router = useRouter();
@@ -147,7 +160,6 @@ export default function Home() {
     return { decimal: dec, points: pts, earned: pts * 4 };
   }, [focusScore, hours, minutes]);
 
-  // ------- period point totals -------
   const weekPoints = useMemo(() => {
     const start = startOfWeek(new Date(), { weekStartsOn: 1 });
     return records.filter(r => !isAfter(start, parseISO(r.created_at))).reduce((s, r) => s + r.points, 0);
@@ -174,6 +186,19 @@ export default function Home() {
     categories.map(c => ({ name: c.name, value: Number(records.filter(r => r.category === c.name).reduce((s, r) => s + r.decimal_hours, 0).toFixed(2)), color: c.color })),
   [records, categories]);
 
+  // ---------- unified history ----------
+  const history = useMemo<HistoryItem[]>(() => {
+    const acts: HistoryItem[] = records.map(r => ({
+      id: r.id, kind: "activity" as const, created_at: r.created_at,
+      category: r.category, hours: r.hours, minutes: r.minutes,
+      focus_score: r.focus_score, points: r.points, earned_minutes: r.earned_minutes,
+    }));
+    const sps: HistoryItem[] = spends.map(s => ({
+      id: s.id + "-spend", kind: "spend" as const, created_at: s.created_at, amount: s.minutes,
+    }));
+    return [...acts, ...sps].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [records, spends]);
+
   // ---------- actions ----------
   async function addRecord() {
     const h = clampNumber(Math.floor(Number(hours)), 0, 24), m = clampNumber(Math.floor(Number(minutes)), 0, 59);
@@ -198,14 +223,14 @@ export default function Home() {
     showToast("消耗 " + amount + " 分钟娱乐时间");
   }
 
-  async function deleteRecord(id: string) {
-    setRecords(c => c.filter(i => i.id !== id));
-    if (supabase) { try { await supabase.from("activity_records").delete().eq("id", id); } catch (_) {} }
-  }
-
-  async function deleteSpend(id: string) {
-    setSpends(c => c.filter(i => i.id !== id));
-    if (supabase) { try { await supabase.from("entertainment_spends").delete().eq("id", id); } catch (_) {} }
+  async function deleteItem(item: HistoryItem) {
+    if (item.kind === "activity") {
+      setRecords(c => c.filter(i => i.id !== item.id));
+      if (supabase) { try { await supabase.from("activity_records").delete().eq("id", item.id); } catch (_) {} }
+    } else {
+      setSpends(c => c.filter(i => i.id !== item.id.replace("-spend", "")));
+      if (supabase) { try { await supabase.from("entertainment_spends").delete().eq("id", item.id.replace("-spend", "")); } catch (_) {} }
+    }
   }
 
   async function handleAddCategory() {
@@ -242,11 +267,7 @@ export default function Home() {
 
   return (
     <>
-      {/*
-      ===== ===== ===== ===== =====
-      Toast 提示
-      ===== ===== ===== ===== =====
-      */}
+      {/* Toast */}
       {toast && (
         <div className="fixed left-1/2 top-4 z-[100] -translate-x-1/2 toast-animate">
           <div className={`rounded-2xl px-5 py-3 text-sm font-semibold shadow-lg backdrop-blur ${toast.type === "success" ? "bg-aqua/90 text-white" : "bg-coral/90 text-white"}`}>
@@ -255,11 +276,7 @@ export default function Home() {
         </div>
       )}
 
-      {/*
-      ===== ===== ===== ===== =====
-      顶栏：用户 + 退出
-      ===== ===== ===== ===== =====
-      */}
+      {/* Top bar */}
       <div className="fixed left-0 right-0 top-0 z-50 flex items-center justify-between border-b border-white/60 bg-white/80 px-4 py-2.5 backdrop-blur sm:px-6">
         <span className="truncate text-sm font-semibold text-slate-600">{userEmail}</span>
         <div className="flex shrink-0 items-center gap-3">
@@ -272,16 +289,11 @@ export default function Home() {
         </div>
       </div>
 
-      {/*
-      ===== ===== ===== ===== =====
-      分类管理弹窗
-      ===== ===== ===== ===== =====
-      */}
+      {/* Category modal */}
       {showCatModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4" onClick={() => setShowCatModal(false)}>
           <div className="w-full max-w-sm rounded-[28px] border border-white/70 bg-white p-5 shadow-soft backdrop-blur" onClick={e => e.stopPropagation()}>
             <h3 className="mb-4 text-lg font-semibold">管理分类</h3>
-
             <div className="mb-4 flex max-h-48 flex-col gap-2 overflow-y-auto">
               {categories.map(c => (
                 <div key={c.id} className="flex items-center justify-between rounded-2xl bg-mist px-3 py-2.5 text-sm">
@@ -295,7 +307,6 @@ export default function Home() {
                 </div>
               ))}
             </div>
-
             <div className="flex flex-wrap gap-2">
               <input className="h-10 min-w-0 flex-1 rounded-2xl border border-line bg-white px-3 text-sm outline-none focus:border-aqua" placeholder="分类名称" value={newCatName} onChange={e => setNewCatName(e.target.value)} />
               <div className="flex gap-1">
@@ -306,24 +317,14 @@ export default function Home() {
               <button onClick={handleAddCategory} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-aqua text-white"><Plus size={18} /></button>
             </div>
             {catMsg && <p className="mt-2 text-xs text-red-500">{catMsg}</p>}
-
             <button onClick={() => setShowCatModal(false)} className="mt-4 h-10 w-full rounded-2xl bg-ink text-sm font-semibold text-white">完成</button>
           </div>
         </div>
       )}
 
-      {/*
-      ===== ===== ===== ===== =====
-      页面上方留出顶栏空间
-      ===== ===== ===== ===== =====
-      */}
-      <main className="safe-bottom mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-4 overflow-x-hidden px-4 pb-6 pt-16 sm:px-6 lg:grid lg:grid-cols-[1fr_1.25fr] lg:items-start lg:gap-6 lg:pt-20">
+      <main className="safe-bottom mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-4 overflow-x-hidden px-4 pb-6 pt-16 sm:px-6 lg:grid lg:grid-cols-[1fr_1fr] lg:gap-6 lg:pt-20">
 
-        {/*
-        ===== ===== ===== ===== =====
-        左栏
-        ===== ===== ===== ===== =====
-        */}
+        {/* ===== Left Column ===== */}
         <section className="flex min-w-0 flex-col gap-4">
           <div className="rounded-[28px] bg-ink p-5 text-white shadow-soft">
             <div className="mb-3 flex items-center justify-between">
@@ -337,23 +338,16 @@ export default function Home() {
               <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">累计赚取</p><p className="mt-1 text-xl font-semibold">{Math.floor(totals.earned)} 分钟</p></div>
               <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">累计消耗</p><p className="mt-1 text-xl font-semibold">{Math.floor(totals.spent)} 分钟</p></div>
             </div>
-            <div className="mt-3 flex items-center gap-2 rounded-2xl bg-white/10 px-3 py-2 text-sm text-white/72">
+            <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white/10 px-3 py-2 text-sm text-white/72">
               {syncState === "cloud" && hasSupabaseConfig ? <Wifi size={16} /> : <WifiOff size={16} />}
-              <span>{syncState === "cloud" && hasSupabaseConfig ? "Supabase 实时同步已开启" : "本地模式"}</span>
+              <span>{syncState === "cloud" && hasSupabaseConfig ? "实时同步已开启" : "本地模式"}</span>
             </div>
-
-            {/*
-            ===== 周/月积分合计 =====
-            */}
             <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
               <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">本周积分</p><p className="mt-1 text-xl font-semibold">{weekPoints.toFixed(1)}</p></div>
               <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">本月积分</p><p className="mt-1 text-xl font-semibold">{monthPoints.toFixed(1)}</p></div>
             </div>
           </div>
 
-          {/*
-          ===== 记录活动 =====
-          */}
           <Panel title="记录活动" icon={<Plus size={20} />}>
             <div className="flex flex-wrap gap-2">
               {categories.map(c => (
@@ -380,9 +374,6 @@ export default function Home() {
             <button onClick={addRecord} className="h-14 rounded-2xl bg-aqua text-lg font-semibold text-white shadow-soft transition hover:brightness-110 active:scale-[0.97]">记录本次活动</button>
           </Panel>
 
-          {/*
-          ===== 消耗娱乐时间 =====
-          */}
           <Panel title="消耗娱乐时间" icon={<Flame size={20} />}>
             <div className="flex gap-3">
               <input className="h-14 min-w-0 flex-1 rounded-2xl border border-line bg-white px-4 text-lg outline-none focus:border-aqua" inputMode="numeric" placeholder="分钟数" value={spendMinutes} onChange={e => setSpendMinutes(e.target.value)} />
@@ -391,20 +382,13 @@ export default function Home() {
           </Panel>
         </section>
 
-        {/*
-        ===== ===== ===== ===== =====
-        右栏
-        ===== ===== ===== ===== =====
-        */}
+        {/* ===== Right Column ===== */}
         <section className="flex min-w-0 flex-col gap-4">
           <div className="grid grid-cols-2 gap-3">
             <StatusCard icon={<Activity size={20} />} label="今日积分" value={totals.todayPoints.toFixed(1)} />
             <StatusCard icon={<Clock3 size={20} />} label="今日活动" value={`${totals.todayHours.toFixed(1)} 小时`} />
           </div>
 
-          {/*
-          ===== 数据看板 =====
-          */}
           <Panel title="数据看板" icon={<BarChart3 size={20} />}>
             <div className="grid grid-cols-3 gap-2 rounded-2xl bg-mist p-1">
               {(["week", "month", "year"] as Period[]).map(p => (
@@ -444,49 +428,40 @@ export default function Home() {
             </div>
           </Panel>
 
-          {/*
-          ===== 消耗记录 =====
-          */}
-          {spends.length > 0 && (
-            <Panel title="消耗记录" icon={<Flame size={20} />}>
-              <div className="flex flex-col gap-3">
-                {spends.slice(0, 20).map(item => (
-                  <div key={item.id} className="grid grid-cols-[1fr_auto] gap-3 rounded-3xl border border-line bg-white p-4">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Flame size={16} className="shrink-0 text-coral" />
-                        <p className="font-semibold">消耗 {item.minutes} 分钟</p>
-                        <p className="text-sm text-slate-500">{format(parseISO(item.created_at), "MM/dd HH:mm")}</p>
-                      </div>
-                    </div>
-                    <button aria-label="删除消耗记录" onClick={() => deleteSpend(item.id)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-mist text-slate-500"><Trash2 size={18} /></button>
-                  </div>
-                ))}
-                {spends.length > 20 && <p className="text-center text-sm text-slate-500">仅显示最近 20 条消耗记录</p>}
-              </div>
-            </Panel>
-          )}
-
-          {/*
-          ===== 活动记录 =====
-          */}
-          <Panel title="活动记录" icon={syncState === "cloud" && hasSupabaseConfig ? <Wifi size={20} /> : <WifiOff size={20} />}>
+          {/* ===== Unified Timeline ===== */}
+          <Panel title="时间线" icon={syncState === "cloud" && hasSupabaseConfig ? <Wifi size={20} /> : <WifiOff size={20} />}>
             <div className="flex flex-col gap-3">
-              {records.length === 0 ? (
-                <div className="rounded-3xl bg-mist p-6 text-center text-slate-500">还没有记录，先完成一次活动吧。</div>
-              ) : records.map(item => (
-                <div key={item.id} className="grid grid-cols-[1fr_auto] gap-3 rounded-3xl border border-line bg-white p-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: colorByCat(item.category) }} />
-                      <p className="truncate font-semibold">{item.category}</p>
-                      <p className="shrink-0 text-sm text-slate-500">{format(parseISO(item.created_at), "MM/dd HH:mm")}</p>
+              {history.length === 0 ? (
+                <div className="rounded-3xl bg-mist p-6 text-center text-slate-500">还没有记录，开始你的第一次活动吧。</div>
+              ) : history.slice(0, 50).map(item => (
+                <div key={item.id} className={`rounded-3xl border p-4 ${item.kind === "activity" ? "border-line bg-white" : "border-coral/20 bg-coral/[0.04]"}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      {item.kind === "activity" ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-aqua/10 text-aqua"><ArrowUp size={14} /></span>
+                          <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: colorByCat(item.category || "") }} />
+                          <p className="font-semibold">{item.category}</p>
+                          <p className="text-sm text-slate-500">{format(parseISO(item.created_at), "MM/dd HH:mm")}</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-coral/10 text-coral"><ArrowDown size={14} /></span>
+                          <p className="font-semibold text-coral">消耗</p>
+                          <p className="text-sm text-slate-500">{format(parseISO(item.created_at), "MM/dd HH:mm")}</p>
+                        </div>
+                      )}
+                      {item.kind === "activity" ? (
+                        <p className="mt-1.5 text-sm text-slate-600">{item.hours}小时{item.minutes}分钟 · 专注 {item.focus_score} · {item.points} 积分 · <span className="font-semibold text-aqua">+{item.earned_minutes} 分钟</span></p>
+                      ) : (
+                        <p className="mt-1.5 text-sm text-slate-600"><span className="font-semibold text-coral">-{item.amount} 分钟</span> 娱乐时间</p>
+                      )}
                     </div>
-                    <p className="mt-2 truncate text-sm text-slate-600">{item.hours}小时{item.minutes}分钟 · 专注 {item.focus_score} · {item.points} 积分 · +{item.earned_minutes} 分钟</p>
+                    <button aria-label="删除" onClick={() => deleteItem(item)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-mist text-slate-500 hover:bg-red-50 hover:text-red-500"><Trash2 size={16} /></button>
                   </div>
-                  <button aria-label="删除记录" onClick={() => deleteRecord(item.id)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-mist text-slate-500"><Trash2 size={18} /></button>
                 </div>
               ))}
+              {history.length > 50 && <p className="text-center text-sm text-slate-500">仅显示最近 50 条记录</p>}
             </div>
           </Panel>
         </section>
@@ -495,7 +470,7 @@ export default function Home() {
   );
 }
 
-// ===== ===== ===== ===== helper components ===== ===== ===== =====
+// ===== helper components =====
 
 function Panel({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
