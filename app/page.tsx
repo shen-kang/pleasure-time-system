@@ -83,6 +83,7 @@ export default function Home() {
   const [newCatColor, setNewCatColor] = useState<string>(colorPalette[0]);
   const [catMsg, setCatMsg] = useState("");
   const [highlightedLine, setHighlightedLine] = useState<string | null>(null);
+  const [displayCount, setDisplayCount] = useState(10);
 
   // ---------- toast ----------
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
@@ -489,7 +490,7 @@ export default function Home() {
             <div className="flex flex-col gap-3">
               {history.length === 0 ? (
                 <div className="rounded-3xl bg-mist p-6 text-center text-slate-500">还没有记录，开始你的第一次活动吧。</div>
-              ) : history.slice(0, 50).map(item => (
+              ) : history.slice(0, displayCount).map(item => (
                 <div key={item.id} className={`rounded-3xl border p-4 ${item.kind === "activity" ? "border-line bg-white" : "border-coral/20 bg-coral/[0.04]"}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -517,7 +518,9 @@ export default function Home() {
                   </div>
                 </div>
               ))}
-              {history.length > 50 && <p className="text-center text-sm text-slate-500">仅显示最近 50 条记录</p>}
+              {displayCount < history.length && (
+                <button onClick={() => setDisplayCount(d => d + 10)} className="h-12 w-full rounded-2xl border border-line bg-white text-sm font-semibold text-slate-500 transition hover:bg-mist">展开更多 (共{history.length}条)</button>
+              )}
             </div>
           </Panel>
         </section>
