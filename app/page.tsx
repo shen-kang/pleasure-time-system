@@ -8,6 +8,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieCh
 import { supabase, hasSupabaseConfig } from "@/lib/supabase";
 import { ActivityRecord, colorPalette, EntertainmentSpend, Period, UserCategory } from "@/lib/types";
 
+const DAILY_TARGET = 80;
 const recordStoragePrefix = "pleasure-records-";
 const spendStoragePrefix = "pleasure-spends-";
 
@@ -23,6 +24,7 @@ function writeLocal(key: string, value: unknown) {
 
 function decimalHours(hours: number, minutes: number) { return hours + minutes / 60; }
 function clampNumber(value: number, min: number, max: number) { return Math.min(max, Math.max(min, Number.isFinite(value) ? value : min)); }
+function diffDays(a: Date, b: Date) { return Math.floor((a.getTime() - b.getTime()) / 86400000); }
 function periodStart(period: Period) { const n = new Date(); if (period === "week") return startOfWeek(n, { weekStartsOn: 1 }); if (period === "month") return startOfMonth(n); return startOfYear(n); }
 function chartLabel(date: Date, period: Period) {
   if (period === "week") return ["日","一","二","三","四","五","六"][date.getDay()];
@@ -168,6 +170,20 @@ export default function Home() {
     const start = startOfMonth(new Date());
     return records.filter(r => !isAfter(start, parseISO(r.created_at))).reduce((s, r) => s + r.points, 0);
   }, [records]);
+
+  // Daily target calculation
+  const targetGap = useMemo(() => {
+    const now = new Date();
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+    const monthStart = startOfMonth(now);
+    const daysWeek = diffDays(now, weekStart) + 1;
+    const daysMonth = diffDays(now, monthStart) + 1;
+    const weekExpected = DAILY_TARGET * daysWeek;
+    const monthExpected = DAILY_TARGET * daysMonth;
+    const weekGap = Number((weekPoints - weekExpected).toFixed(1));
+    const monthGap = Number((monthPoints - monthExpected).toFixed(1));
+    return { weekGap, monthGap, weekExpected, monthExpected };
+  }, [weekPoints, monthPoints]);
 
   const trendData = useMemo(() => {
     const start = periodStart(period);
@@ -343,8 +359,8 @@ export default function Home() {
               <span>{syncState === "cloud" && hasSupabaseConfig ? "实时同步已开启" : "本地模式"}</span>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">本周积分</p><p className="mt-1 text-xl font-semibold">{weekPoints.toFixed(1)}</p></div>
-              <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">本月积分</p><p className="mt-1 text-xl font-semibold">{monthPoints.toFixed(1)}</p></div>
+              <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">本周积分</p><p className="mt-1 text-xl font-semibold">{weekPoints.toFixed(1)}</p><p className={`mt-0.5 text-xs ${targetGap.weekGap >= 0 ? "text-green-400" : "text-coral"}`}>{targetGap.weekGap >= 0 ? "+" : ""}{targetGap.weekGap.toFixed(1)} (目标 {targetGap.weekExpected.toFixed(0)})</p></div>
+              <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">本月积分</p><p className="mt-1 text-xl font-semibold">{monthPoints.toFixed(1)}</p><p className={`mt-0.5 text-xs ${targetGap.monthGap >= 0 ? "text-green-400" : "text-coral"}`}>{targetGap.monthGap >= 0 ? "+" : ""}{targetGap.monthGap.toFixed(1)} (目标 {targetGap.monthExpected.toFixed(0)})</p></div>
             </div>
           </div>
 
@@ -406,17 +422,17 @@ export default function Home() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="h-56">
-                <ResponsiveContainer><PieChart>
+            <div className="grid gap-4">
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%"><PieChart>
                   <Pie data={categoryData} dataKey="value" nameKey="name" innerRadius={42} outerRadius={78} paddingAngle={3}>
                     {categoryData.map(e => (<Cell key={e.name} fill={e.color} />))}
                   </Pie>
                   <Tooltip /><Legend />
                 </PieChart></ResponsiveContainer>
               </div>
-              <div className="h-56">
-                <ResponsiveContainer><BarChart data={categoryData} margin={{ top: 12, right: 8, left: -24, bottom: 0 }}>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%"><BarChart data={categoryData} margin={{ top: 12, right: 8, left: -24, bottom: 0 }}>
                   <CartesianGrid stroke="#DDE3EA" strokeDasharray="4 4" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} /><YAxis tick={{ fontSize: 11 }} />
                   <Tooltip />
