@@ -24,6 +24,7 @@
  function decimalHours(hours: number, minutes: number) { return hours + minutes / 60; }
  function clampNumber(value: number, min: number, max: number) { return Math.min(max, Math.max(min, Number.isFinite(value) ? value : min)); }
  function periodStart(period: Period) { const n = new Date(); if (period === "week") return startOfWeek(n, { weekStartsOn: 1 }); if (period === "month") return startOfMonth(n); return startOfYear(n); }
+function diffDays(a: Date, b: Date) { return Math.floor((a.getTime() - b.getTime()) / 86400000); }
  function chartLabel(date: Date, period: Period) {
    if (period === "week") return ["周日","周一","周二","周三","周四","周五","周六"][date.getDay()];
    if (period === "month") return format(date, "MM/dd");
@@ -152,7 +153,39 @@
      return records.filter(r => !isAfter(start, parseISO(r.created_at))).reduce((s, r) => s + r.points, 0);
    }, [records]);
  
-   const trendData = useMemo(() => {
+  const targetGap = useMemo(() => {
+    const now = new Date();
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+    const monthStart = startOfMonth(now);
+    const daysWeek = diffDays(now, weekStart) + 1;
+    const daysMonth = diffDays(now, monthStart) + 1;
+    const weekGap = Number((weekPoints - 80 * daysWeek).toFixed(1));
+    const monthGap = Number((monthPoints - 80 * daysMonth).toFixed(1));
+    const todayGap = Number((totals.todayPoints - 80).toFixed(1));
+    const weekAvg = daysWeek > 0 ? Number((weekPoints / daysWeek).toFixed(1)) : 0;
+    const monthAvg = daysMonth > 0 ? Number((monthPoints / daysMonth).toFixed(1)) : 0;
+    return { weekGap, monthGap, todayGap, weekAvg, monthAvg };
+  }, [weekPoints, monthPoints, totals.todayPoints]);
+
+  const todayEntertainment = useMemo(() => {
+    const now = new Date();
+    const yesterday = addDays(now, -1);
+    const todayMins = spends.filter(s => isSameDay(parseISO(s.created_at), now)).reduce((s, i) => s + i.minutes, 0);
+    const todayHours = Number((todayMins / 60).toFixed(1));
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+    const monthStart = startOfMonth(now);
+    const daysWeekPast = diffDays(yesterday, weekStart) + 1;
+    const daysMonthPast = diffDays(yesterday, monthStart) + 1;
+    const weekSpends = spends.filter(s => { const d = parseISO(s.created_at); return d > weekStart && d <= yesterday; });
+    const weekTotalMins = weekSpends.reduce((s, i) => s + i.minutes, 0);
+    const weekAvgHours = daysWeekPast > 0 ? Number((weekTotalMins / 60 / daysWeekPast).toFixed(2)) : 0;
+    const monthSpends = spends.filter(s => { const d = parseISO(s.created_at); return d > monthStart && d <= yesterday; });
+    const monthTotalMins = monthSpends.reduce((s, i) => s + i.minutes, 0);
+    const monthAvgHours = daysMonthPast > 0 ? Number((monthTotalMins / 60 / daysMonthPast).toFixed(2)) : 0;
+    return { todayHours, weekAvgHours, monthAvgHours };
+  }, [spends]);
+
+  const trendData = useMemo(() => {
      const start = periodStart(period);
      const days = period === "week" ? 7 : period === "month" ? 31 : 12;
      return Array.from({ length: days }).map((_, i) => {
@@ -314,13 +347,31 @@
                {syncState === "cloud" && hasSupabaseConfig ? <Wifi size={16} /> : <WifiOff size={16} />}
                <span>{syncState === "cloud" && hasSupabaseConfig ? "Supabase 实时同步已开启" : "本地模式"}</span>
              </div>
- 
+
+             {/*
+             ===== 今日娱乐 =====
+             */}
+             <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+               <div className="rounded-2xl bg-white/10 p-2.5">
+                 <p className="text-white/60">今日已娱乐</p>
+                 <p className="mt-0.5 text-lg font-semibold">{todayEntertainment.todayHours} 小时</p>
+               </div>
+               <div className="rounded-2xl bg-white/10 p-2.5">
+                 <p className="text-white/60">周均消耗</p>
+                 <p className="mt-0.5 text-lg font-semibold">{todayEntertainment.weekAvgHours} 小时</p>
+               </div>
+               <div className="rounded-2xl bg-white/10 p-2.5">
+                 <p className="text-white/60">月均消耗</p>
+                 <p className="mt-0.5 text-lg font-semibold">{todayEntertainment.monthAvgHours} 小时</p>
+               </div>
+             </div>
+
              {/*
              ===== 周/月积分合计 =====
              */}
              <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-               <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">本周积分</p><p className="mt-1 text-xl font-semibold">{weekPoints.toFixed(1)}</p></div>
-               <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">本月积分</p><p className="mt-1 text-xl font-semibold">{monthPoints.toFixed(1)}</p></div>
+               <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">本周积分</p><p className="mt-1 text-xl font-semibold">{weekPoints.toFixed(1)}</p><p className={`mt-0.5 text-xs ${targetGap.weekGap >= 0 ? "text-green-300" : "text-red-300"}`}>{targetGap.weekGap >= 0 ? "+" : ""}{targetGap.weekGap.toFixed(1)}</p><p className="mt-0.5 text-xs text-white/50">周均 {targetGap.weekAvg} 分</p></div>
+               <div className="rounded-2xl bg-white/10 p-3"><p className="text-white/60">本月积分</p><p className="mt-1 text-xl font-semibold">{monthPoints.toFixed(1)}</p><p className={`mt-0.5 text-xs ${targetGap.monthGap >= 0 ? "text-green-300" : "text-red-300"}`}>{targetGap.monthGap >= 0 ? "+" : ""}{targetGap.monthGap.toFixed(1)}</p><p className="mt-0.5 text-xs text-white/50">月均 {targetGap.monthAvg} 分</p></div>
              </div>
            </div>
  
@@ -342,13 +393,13 @@
                <NumberField label="分钟" value={minutes} onChange={setMinutes} min={0} max={59} />
              </div>
              <div className="rounded-3xl bg-mist p-4">
-               <div className="mb-3 flex items-center justify-between"><label className="text-sm font-semibold text-slate-600">专注评分</label><span className="text-2xl font-semibold">{focusScore}</span></div>
+               <div className="mb-3 flex items-center justify-between"><label className="text-sm font-semibold text-slate-600">状态评分</label><span className="text-2xl font-semibold">{focusScore}</span></div>
                <input className="h-10 w-full" type="range" min="0" max="20" value={focusScore} onChange={e => setFocusScore(Number(e.target.value))} />
              </div>
              <div className="grid grid-cols-3 gap-2 rounded-3xl border border-line p-3 text-center text-sm">
                <Metric label="小时" value={preview.decimal.toFixed(2)} />
                <Metric label="积分" value={preview.points.toFixed(1)} />
-               <Metric label="娱乐" value={`${preview.earned.toFixed(0)}分`} />
+               <Metric label="娱乐" value={`${preview.earned.toFixed(0)}分钟`} />
              </div>
              <button onClick={addRecord} className="h-14 rounded-2xl bg-aqua text-lg font-semibold text-white shadow-soft">记录本次活动</button>
            </Panel>
