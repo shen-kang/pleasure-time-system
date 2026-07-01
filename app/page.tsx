@@ -71,18 +71,19 @@
    // ---------- load categories ----------
    useEffect(() => {
      const catClient = supabase;
-     if (!userId || !catClient) return;
-     (async () => {
-       const { data } = await catClient.from("categories").select("*").eq("user_id", userId).order("created_at");
-       if (data && data.length > 0) {
-         setCategories(data);
-       } else {
-         const defaults: UserCategory[] = colorPalette.slice(0, 5).map((c, i) => ({
-           id: crypto.randomUUID(), name: ["投资","套利","健身","羽毛球","阅读"][i], color: c, created_at: new Date().toISOString(),
-         }));
-         await catClient.from("categories").insert(defaults.map(d => ({ ...d, user_id: userId })));
-         setCategories(defaults);
-       }
+    if (!userId || !catClient) return;
+    const uid = userId;
+    (async () => {
+      const { data } = await catClient.from("categories").select("*").eq("user_id", uid).order("created_at");
+      if (data && data.length > 0) {
+        setCategories(data);
+      } else {
+        const defaults: UserCategory[] = colorPalette.slice(0, 5).map((c, i) => ({
+          id: crypto.randomUUID(), name: ["投资","套利","健身","羽毛球","阅读"][i], color: c, created_at: new Date().toISOString(),
+        }));
+        await catClient.from("categories").insert(defaults.map(d => ({ ...d, user_id: uid })));
+        setCategories(defaults);
+      }
      })();
    }, [userId]);
 
@@ -95,13 +96,14 @@
      setRecords(readLocal(rk, [])); setSpends(readLocal(sk, []));
      const recClient = supabase;
      if (!recClient || !userId) return;
-     setSyncState("cloud");
- 
-     const load = async () => {
-       const [{ data: rd }, { data: sd }] = await Promise.all([
-         recClient.from("activity_records").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
-         recClient.from("entertainment_spends").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
-       ]);
+    setSyncState("cloud");
+    const uid = userId;
+
+    const load = async () => {
+      const [{ data: rd }, { data: sd }] = await Promise.all([
+        recClient.from("activity_records").select("*").eq("user_id", uid).order("created_at", { ascending: false }),
+        recClient.from("entertainment_spends").select("*").eq("user_id", uid).order("created_at", { ascending: false }),
+      ]);
        if (rd) { setRecords(rd as ActivityRecord[]); writeLocal(rk, rd); }
        if (sd) { setSpends(sd as EntertainmentSpend[]); writeLocal(sk, sd); }
      };
@@ -215,10 +217,10 @@
      if (selectedCat === cat.name && categories.length > 1) setSelectedCat(categories.find(x => x.id !== cat.id)?.name || "");
    }
  
-   async function handleLogout() {
-     await supabase?.auth.signOut();
-     router.replace("/login");
-   }
+  async function handleLogout() {
+    if (supabase) await supabase.auth.signOut();
+    router.replace("/login");
+  }
  
    if (authLoading) return <main className="flex min-h-screen items-center justify-center"><p className="text-slate-500">加载中...</p></main>;
  
