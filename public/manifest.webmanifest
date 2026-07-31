@@ -4,8 +4,8 @@
   "description": "游戏化时间与效率管理系统",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F5F7FA",
-  "theme_color": "#151719",
+  "background_color": "#0B0E12",
+  "theme_color": "#0B0E12",
   "orientation": "portrait-primary",
   "icons": [
     {

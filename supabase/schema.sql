@@ -1,7 +1,7 @@
 create table if not exists public.activity_records (
   id uuid primary key,
   profile_id text not null,
-  category text not null check (category in ('投资', '套利', '健身', '羽毛球', '阅读')),
+  category text not null,
   hours integer not null check (hours >= 0 and hours <= 24),
   minutes integer not null check (minutes >= 0 and minutes <= 59),
   decimal_hours numeric(8, 2) not null,
@@ -10,6 +10,11 @@ create table if not exists public.activity_records (
   earned_minutes numeric(10, 1) not null,
   created_at timestamptz not null default now()
 );
+
+-- Older installations limited activities to the five original categories.
+-- Categories are user-managed now, so remove that obsolete restriction.
+alter table public.activity_records
+  drop constraint if exists activity_records_category_check;
 
 create table if not exists public.entertainment_spends (
   id uuid primary key,
@@ -83,6 +88,10 @@ end $$;
  -- ============================================================
  -- New RLS policies for activity_records (auth-based)
  -- ============================================================
+ drop policy if exists "Users can read own activity records" on public.activity_records;
+ drop policy if exists "Users can insert own activity records" on public.activity_records;
+ drop policy if exists "Users can delete own activity records" on public.activity_records;
+
  create policy "Users can read own activity records"
    on public.activity_records for select
    using (auth.uid() = user_id);
@@ -98,6 +107,10 @@ end $$;
  -- ============================================================
  -- New RLS policies for entertainment_spends (auth-based)
  -- ============================================================
+ drop policy if exists "Users can read own spends" on public.entertainment_spends;
+ drop policy if exists "Users can insert own spends" on public.entertainment_spends;
+ drop policy if exists "Users can delete own spends" on public.entertainment_spends;
+
  create policy "Users can read own spends"
    on public.entertainment_spends for select
    using (auth.uid() = user_id);
@@ -105,11 +118,20 @@ end $$;
  create policy "Users can insert own spends"
    on public.entertainment_spends for insert
    with check (auth.uid() = user_id);
+
+ create policy "Users can delete own spends"
+   on public.entertainment_spends for delete
+   using (auth.uid() = user_id);
  
  -- ============================================================
  -- RLS policies for categories
  -- ============================================================
  alter table public.categories enable row level security;
+
+ drop policy if exists "Users can read own categories" on public.categories;
+ drop policy if exists "Users can insert own categories" on public.categories;
+ drop policy if exists "Users can update own categories" on public.categories;
+ drop policy if exists "Users can delete own categories" on public.categories;
  
  create policy "Users can read own categories"
    on public.categories for select
