@@ -1,7 +1,7 @@
 "use client";
 
 import { addDays, endOfDay, format, isAfter, isSameDay, parseISO, startOfMonth, startOfWeek, startOfYear } from "date-fns";
-import { ArrowDown, ArrowUp, BarChart3, Flame, LogOut, Plus, Settings, Trash2, Wifi, WifiOff } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, BarChart3, Flame, LogOut, Plus, Settings, Sparkles, Trash2, Wifi, WifiOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -12,13 +12,13 @@ const DAILY_TARGET = 80;
 const recordStoragePrefix = "pleasure-records-";
 const spendStoragePrefix = "pleasure-spends-";
 const chartTooltipStyle = {
-  backgroundColor: "#171C23",
-  border: "1px solid #303943",
+  backgroundColor: "#171A18",
+  border: "1px solid #343936",
   borderRadius: 8,
   boxShadow: "0 12px 30px rgba(0, 0, 0, 0.28)",
 };
-const chartLabelStyle = { color: "#CBD5E1" };
-const chartTick = { fill: "#94A3B8", fontSize: 11 };
+const chartLabelStyle = { color: "#D1D5DB" };
+const chartTick = { fill: "#9CA3AF", fontSize: 11 };
 
 function readLocal<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -33,6 +33,12 @@ function writeLocal(key: string, value: unknown) {
 function decimalHours(hours: number, minutes: number) { return hours + minutes / 60; }
 function clampNumber(value: number, min: number, max: number) { return Math.min(max, Math.max(min, Number.isFinite(value) ? value : min)); }
 function formatMinutes(value: number) { return Number(value.toFixed(1)).toLocaleString("zh-CN", { maximumFractionDigits: 1 }); }
+function contrastTextColor(hex: string) {
+  const value = hex.replace("#", "");
+  if (value.length !== 6) return "#FFFFFF";
+  const [r, g, b] = [0, 2, 4].map(offset => Number.parseInt(value.slice(offset, offset + 2), 16));
+  return (r * 299 + g * 587 + b * 114) / 1000 > 156 ? "#111513" : "#FFFFFF";
+}
 function diffDays(a: Date, b: Date) { return Math.floor((a.getTime() - b.getTime()) / 86400000); }
 function periodStart(period: Period) { const n = new Date(); if (period === "week") return startOfWeek(n, { weekStartsOn: 1 }); if (period === "month") return startOfMonth(n); return startOfYear(n); }
 function chartLabel(date: Date, period: Period) {
@@ -400,17 +406,28 @@ export default function Home() {
       )}
 
       {/* Top bar */}
-      <div className="safe-top fixed left-0 right-0 top-0 z-50 flex items-center justify-between border-b border-line/80 bg-canvas/90 px-4 py-2.5 backdrop-blur-xl sm:px-6">
-        <span className="min-w-0 truncate pr-3 text-sm font-semibold text-slate-300">{userEmail}</span>
+      <header className="safe-top fixed left-0 right-0 top-0 z-50 flex items-center justify-between border-b border-line/70 bg-canvas/90 px-4 py-2 backdrop-blur-xl sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-aqua/25 bg-aqua/10 text-aqua">
+            <Sparkles size={19} />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-slate-100">欢愉值时间银行</p>
+            <div className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
+              <span className={`h-1.5 w-1.5 rounded-full ${syncState === "cloud" ? "bg-emerald-400" : "bg-amber-400"}`} />
+              <span className="truncate">{userEmail}</span>
+            </div>
+          </div>
+        </div>
         <div className="flex shrink-0 items-center gap-2">
-          <button aria-label="管理分类" title="管理分类" onClick={() => setShowCatModal(true)} className="flex h-10 w-10 items-center justify-center rounded-lg bg-elevated text-slate-200 transition hover:bg-line">
+          <button aria-label="管理分类" title="管理分类" onClick={() => setShowCatModal(true)} className="icon-button">
             <Settings size={18} />
           </button>
-          <button aria-label="退出登录" title="退出登录" onClick={handleLogout} className="flex h-10 w-10 items-center justify-center rounded-lg bg-elevated text-slate-200 transition hover:bg-line">
+          <button aria-label="退出登录" title="退出登录" onClick={handleLogout} className="icon-button">
             <LogOut size={18} />
           </button>
         </div>
-      </div>
+      </header>
 
       {/* Category modal */}
       {showCatModal && (
@@ -445,39 +462,44 @@ export default function Home() {
         </div>
       )}
 
-      <main className="safe-bottom mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-4 overflow-x-hidden px-4 pb-6 pt-20 sm:px-6 lg:grid lg:grid-cols-[1fr_1fr] lg:gap-6 lg:pt-24">
+      <main className="safe-bottom mx-auto flex min-h-screen w-full max-w-[1180px] flex-col gap-4 overflow-x-hidden px-4 pb-8 pt-24 sm:px-6 lg:grid lg:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)] lg:gap-5 lg:pt-28">
 
         {/* ===== Left Column ===== */}
         <section className="flex min-w-0 flex-col gap-4">
-          <div className="rounded-lg border border-line bg-ink p-5 text-white shadow-deep">
+          <div className="relative overflow-hidden rounded-lg border border-line bg-ink p-5 text-white shadow-deep sm:p-6">
+            <div className="absolute inset-x-0 top-0 h-px bg-aqua/70" />
             <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
               <div className="min-w-0">
-                <p className="text-sm text-white/65">当前可用娱乐时间</p>
-                <div className="mt-1 flex items-baseline gap-1.5">
-                  <span className="min-w-0 text-4xl font-semibold tabular-nums tracking-normal">{formatMinutes(totals.balance)}</span>
-                  <span className="text-sm text-white/50">分钟</span>
+                <div className="flex items-center gap-2 text-sm text-white/65">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                  <p>当前可用娱乐时间</p>
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="min-w-0 text-4xl font-semibold tabular-nums tracking-normal sm:text-5xl">{formatMinutes(totals.balance)}</span>
+                  <span className="text-sm text-white/45">分钟</span>
                 </div>
               </div>
-              <div className="shrink-0 border-l border-white/15 pl-4">
-                <p className="text-xs text-white/60">今日已娱乐</p>
-                <p className="mt-0.5 text-lg font-semibold">{todayEntertainment.todayHours} 小时</p>
-                <p className="mt-0.5 text-xs text-white/40">周均{todayEntertainment.weekAvgHours}h | 月均{todayEntertainment.monthAvgHours}h</p>
+              <div className="shrink-0 border-l border-white/10 pl-4 text-right">
+                <p className="text-xs text-white/50">今日已娱乐</p>
+                <p className="mt-1 text-xl font-semibold tabular-nums">{todayEntertainment.todayHours}<span className="ml-1 text-xs font-normal text-white/45">小时</span></p>
+                <p className="mt-1 text-xs text-white/35">周均 {todayEntertainment.weekAvgHours}h · 月均 {todayEntertainment.monthAvgHours}h</p>
               </div>
             </div>
-            <div className="mt-5 grid grid-cols-3 border-t border-white/15 pt-4 text-sm">
-              <div className="min-w-0 pr-2"><p className="text-white/60">今日积分</p><p className="mt-1 text-xl font-semibold tabular-nums">{totals.todayPoints.toFixed(1)}</p><p className={`mt-0.5 text-xs ${targetGap.todayGap >= 0 ? "text-green-400" : "text-coral"}`}>{targetGap.todayGap >= 0 ? "+" : ""}{targetGap.todayGap.toFixed(1)} (目标 {DAILY_TARGET})</p></div>
-              <div className="min-w-0 border-l border-white/15 px-2"><p className="text-white/60">本周积分</p><p className="mt-1 text-xl font-semibold tabular-nums">{weekPoints.toFixed(1)}</p><p className={`mt-0.5 text-xs ${targetGap.weekGap >= 0 ? "text-green-400" : "text-coral"}`}>{targetGap.weekGap >= 0 ? "+" : ""}{targetGap.weekGap.toFixed(1)} (目标 {targetGap.weekExpected.toFixed(0)})</p></div>
-              <div className="min-w-0 border-l border-white/15 pl-2"><p className="text-white/60">本月积分</p><p className="mt-1 text-xl font-semibold tabular-nums">{monthPoints.toFixed(1)}</p><p className={`mt-0.5 text-xs ${targetGap.monthGap >= 0 ? "text-green-400" : "text-coral"}`}>{targetGap.monthGap >= 0 ? "+" : ""}{targetGap.monthGap.toFixed(1)} (目标 {targetGap.monthExpected.toFixed(0)})</p></div>
+            <div className="mt-6 grid grid-cols-3 divide-x divide-white/10 border-t border-white/10 pt-4 text-sm">
+              <GoalStat label="今日积分" value={totals.todayPoints} gap={targetGap.todayGap} target={DAILY_TARGET} />
+              <GoalStat label="本周积分" value={weekPoints} gap={targetGap.weekGap} target={targetGap.weekExpected} />
+              <GoalStat label="本月积分" value={monthPoints} gap={targetGap.monthGap} target={targetGap.monthExpected} />
             </div>
           </div>
 
           <Panel title="记录活动" icon={<Plus size={20} />}>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="活动分类">
               {categories.map(c => (
-                <button key={c.id} onClick={() => setSelectedCat(c.name)}
-                  className={`h-11 rounded-lg px-4 text-sm font-semibold transition ${selectedCat === c.name ? "text-white shadow-sm" : "bg-elevated text-slate-200 hover:bg-line"}`}
-                  style={selectedCat === c.name ? { backgroundColor: c.color } : {}}>
-                  {c.name}
+                <button key={c.id} onClick={() => setSelectedCat(c.name)} aria-pressed={selectedCat === c.name}
+                  className={`flex h-11 items-center gap-2 rounded-lg border px-3.5 text-sm font-semibold transition ${selectedCat === c.name ? "border-transparent shadow-soft" : "border-line bg-elevated text-slate-200 hover:border-slate-500 hover:bg-line"}`}
+                  style={selectedCat === c.name ? { backgroundColor: c.color, color: contrastTextColor(c.color) } : {}}>
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: selectedCat === c.name ? "currentColor" : c.color }} />
+                  <span>{c.name}</span>
                 </button>
               ))}
             </div>
@@ -485,22 +507,26 @@ export default function Home() {
               <NumberField label="小时" value={hours} onChange={setHours} min={0} max={24} />
               <NumberField label="分钟" value={minutes} onChange={setMinutes} min={0} max={59} />
             </div>
-            <div className="rounded-lg bg-elevated p-4">
-              <div className="mb-3 flex items-center justify-between"><label className="text-sm font-semibold text-slate-300">专注评分</label><span className="text-2xl font-semibold tabular-nums">{focusScore}</span></div>
-              <input className="h-10 w-full" type="range" min="0" max="20" value={focusScore} onChange={e => setFocusScore(Number(e.target.value))} />
+            <div className="rounded-lg border border-line/80 bg-elevated p-4">
+              <div className="mb-2 flex items-center justify-between"><label className="text-sm font-semibold text-slate-300">专注评分</label><span className="rounded-md bg-aqua/10 px-2.5 py-1 text-xl font-semibold tabular-nums text-aqua">{focusScore}</span></div>
+              <input className="focus-slider h-10 w-full" type="range" min="0" max="20" value={focusScore} onChange={e => setFocusScore(Number(e.target.value))} />
+              <div className="flex justify-between text-[11px] text-slate-600"><span>0</span><span>20</span></div>
             </div>
-            <div className="grid grid-cols-3 gap-2 rounded-lg border border-line p-3 text-center text-sm">
+            <div className="grid grid-cols-3 divide-x divide-line rounded-lg border border-line bg-canvas/40 p-3 text-center text-sm">
               <Metric label="小时" value={preview.decimal.toFixed(2)} />
               <Metric label="积分" value={preview.points.toFixed(1)} />
               <Metric label="娱乐" value={`${preview.earned.toFixed(0)}分`} />
             </div>
-            <button disabled={saving !== null} onClick={addRecord} className="h-14 rounded-lg bg-aqua text-lg font-semibold text-white shadow-soft transition hover:brightness-110 active:scale-[0.98] disabled:cursor-wait disabled:opacity-60">{saving === "activity" ? "正在保存..." : "记录本次活动"}</button>
+            <button disabled={saving !== null} onClick={addRecord} className="primary-button group">{saving === "activity" ? "正在保存..." : <><span>记录本次活动</span><ArrowRight className="transition-transform group-hover:translate-x-0.5" size={19} /></>}</button>
           </Panel>
 
           <Panel title="消耗娱乐时间" icon={<Flame size={20} />}>
             <div className="flex gap-3">
-              <input className="h-14 min-w-0 flex-1 rounded-lg border border-line bg-canvas px-4 text-lg text-slate-100 outline-none placeholder:text-slate-500 focus:border-aqua" inputMode="numeric" placeholder="分钟数" value={spendMinutes} onChange={e => setSpendMinutes(e.target.value)} />
-              <button disabled={saving !== null} onClick={addSpend} className="h-14 min-w-20 shrink-0 rounded-lg bg-coral px-5 font-semibold text-white transition hover:brightness-110 active:scale-[0.98] disabled:cursor-wait disabled:opacity-60">{saving === "spend" ? "保存中" : "确认"}</button>
+              <div className="relative min-w-0 flex-1">
+                <input className="h-14 w-full rounded-lg border border-line bg-canvas px-4 pr-14 text-lg text-slate-100 outline-none placeholder:text-slate-600 focus:border-coral/70" inputMode="numeric" placeholder="分钟数" value={spendMinutes} onChange={e => setSpendMinutes(e.target.value)} />
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-500">分钟</span>
+              </div>
+              <button disabled={saving !== null} onClick={addSpend} className="h-14 min-w-20 shrink-0 rounded-lg border border-coral/30 bg-coral/15 px-5 font-semibold text-coral transition hover:bg-coral hover:text-white active:scale-[0.98] disabled:cursor-wait disabled:opacity-60">{saving === "spend" ? "保存中" : "确认"}</button>
             </div>
           </Panel>
         </section>
@@ -515,13 +541,14 @@ export default function Home() {
                 <button key={p} onClick={() => setPeriod(p)} className={`h-11 rounded-md font-semibold transition ${period === p ? "bg-aqua text-white shadow-sm" : "text-slate-400 hover:text-slate-100"}`}>{p === "week" ? "周" : p === "month" ? "月" : "年"}</button>
               ))}
             </div>
-            <div className="h-56 w-full">
+            <ChartHeading title="积分与娱乐趋势" meta={period === "week" ? "本周" : period === "month" ? "本月" : "本年"} />
+            <div className="h-60 w-full rounded-lg border border-line/60 bg-canvas/25 px-1 pt-2">
               <ResponsiveContainer>
                 <LineChart data={trendData} margin={{ top: 12, right: 4, left: -24, bottom: 0 }}>
-                  <CartesianGrid stroke="#29313B" strokeDasharray="4 4" />
-                  <XAxis dataKey="label" axisLine={{ stroke: "#46515E" }} tickLine={false} tick={chartTick} interval={period === "month" ? 5 : 0} />
+                  <CartesianGrid stroke="#2A2F2C" strokeDasharray="4 4" />
+                  <XAxis dataKey="label" axisLine={{ stroke: "#454B47" }} tickLine={false} tick={chartTick} interval={period === "month" ? 5 : 0} />
                   <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={chartTick} />
-                  <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={chartTick} label={{ value: "小时", angle: -90, position: "insideRight", offset: 2, fill: "#94A3B8" }} />
+                  <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={chartTick} label={{ value: "小时", angle: -90, position: "insideRight", offset: 2, fill: "#9CA3AF" }} />
                   <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartLabelStyle} />
                   <Legend formatter={value => <span className="text-slate-300">{value}</span>} onMouseEnter={entry => setHighlightedLine(String(entry.value ?? ""))} onMouseLeave={() => setHighlightedLine(null)} />
                   <Line yAxisId="left" type="monotone" dataKey="积分" stroke="#20B8AE" strokeWidth={3} dot={false} name="积分" strokeOpacity={highlightedLine === null || highlightedLine === "积分" ? 1 : 0.15} />
@@ -530,47 +557,53 @@ export default function Home() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
-            <div className="grid gap-4">
-              <div className="h-64">
+            <div className="grid gap-5">
+              <div>
+                <ChartHeading title="分类时间占比" meta="小时" />
+                <div className="h-64 rounded-lg border border-line/60 bg-canvas/25 pt-2">
                 <ResponsiveContainer width="100%" height="100%"><PieChart>
                   <Pie data={categoryData} dataKey="value" nameKey="name" innerRadius={42} outerRadius={78} paddingAngle={3}>
                     {categoryData.map(e => (<Cell key={e.name} fill={e.color} />))}
                   </Pie>
                   <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartLabelStyle} /><Legend formatter={value => <span className="text-slate-300">{value}</span>} />
                 </PieChart></ResponsiveContainer>
+                </div>
               </div>
-              <div className="h-64">
+              <div>
+                <ChartHeading title="分类时长对比" meta="小时" />
+                <div className="h-64 rounded-lg border border-line/60 bg-canvas/25 pt-2">
                 <ResponsiveContainer width="100%" height="100%"><BarChart data={categoryData} margin={{ top: 12, right: 8, left: -24, bottom: 0 }}>
-                  <CartesianGrid stroke="#29313B" strokeDasharray="4 4" />
-                  <XAxis dataKey="name" axisLine={{ stroke: "#46515E" }} tickLine={false} tick={{ ...chartTick, fontSize: 12 }} /><YAxis axisLine={false} tickLine={false} tick={chartTick} />
+                  <CartesianGrid stroke="#2A2F2C" strokeDasharray="4 4" />
+                  <XAxis dataKey="name" axisLine={{ stroke: "#454B47" }} tickLine={false} tick={{ ...chartTick, fontSize: 12 }} /><YAxis axisLine={false} tickLine={false} tick={chartTick} />
                   <Tooltip contentStyle={chartTooltipStyle} labelStyle={chartLabelStyle} />
                   <Bar dataKey="value" name="小时" radius={[8, 8, 0, 0]}>
                     {categoryData.map(e => (<Cell key={e.name} fill={e.color} />))}
                   </Bar>
                 </BarChart></ResponsiveContainer>
+                </div>
               </div>
             </div>
           </Panel>
 
           {/* ===== Unified Timeline ===== */}
           <Panel title="时间线" icon={syncState === "cloud" && hasSupabaseConfig ? <Wifi size={20} /> : <WifiOff size={20} />}>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col">
               {history.length === 0 ? (
                 <div className="rounded-lg bg-elevated p-6 text-center text-slate-400">还没有记录，开始你的第一次活动吧。</div>
               ) : history.slice(0, displayCount).map(item => (
-                <div key={item.id} className={`rounded-lg border p-4 ${item.kind === "activity" ? "border-line bg-elevated" : "border-coral/25 bg-coral/[0.06]"}`}>
+                <div key={item.id} className="group border-b border-line/70 py-4 first:pt-0 last:border-b-0 last:pb-0">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       {item.kind === "activity" ? (
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-aqua/10 text-aqua"><ArrowUp size={14} /></span>
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-aqua/20 bg-aqua/10 text-aqua"><ArrowUp size={14} /></span>
                           <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: colorByCat(item.category || "") }} />
                           <p className="font-semibold">{item.category}</p>
                           <p className="text-sm text-slate-400">{format(parseISO(item.created_at), "MM/dd HH:mm")}</p>
                         </div>
                       ) : (
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-coral/10 text-coral"><ArrowDown size={14} /></span>
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-coral/20 bg-coral/10 text-coral"><ArrowDown size={14} /></span>
                           <p className="font-semibold text-coral">消耗</p>
                           <p className="text-sm text-slate-400">{format(parseISO(item.created_at), "MM/dd HH:mm")}</p>
                         </div>
@@ -581,12 +614,12 @@ export default function Home() {
                         <p className="mt-1.5 text-sm text-slate-300"><span className="font-semibold text-coral">-{formatMinutes(item.amount || 0)} 分钟</span> 娱乐时间</p>
                       )}
                     </div>
-                    <button disabled={deletingId !== null} aria-label="删除" onClick={() => deleteItem(item)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-canvas text-slate-400 transition hover:bg-coral/15 hover:text-coral disabled:cursor-wait disabled:opacity-50"><Trash2 className={deletingId === item.id ? "animate-pulse" : ""} size={16} /></button>
+                    <button disabled={deletingId !== null} aria-label="删除" onClick={() => deleteItem(item)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-coral/10 hover:text-coral disabled:cursor-wait disabled:opacity-50 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"><Trash2 className={deletingId === item.id ? "animate-pulse" : ""} size={16} /></button>
                   </div>
                 </div>
               ))}
               {displayCount < history.length && (
-                <button onClick={() => setDisplayCount(d => d + 10)} className="h-12 w-full rounded-lg border border-line bg-elevated text-sm font-semibold text-slate-300 transition hover:bg-line">展开更多 (共{history.length}条)</button>
+                <button onClick={() => setDisplayCount(d => d + 10)} className="mt-4 h-12 w-full rounded-lg border border-line bg-elevated text-sm font-semibold text-slate-300 transition hover:border-slate-500 hover:bg-line">展开更多 · 共 {history.length} 条</button>
               )}
             </div>
           </Panel>
@@ -600,10 +633,10 @@ export default function Home() {
 
 function Panel({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border border-line bg-panel p-4 shadow-deep sm:p-5">
-      <div className="mb-4 flex items-center gap-2">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-elevated text-aqua">{icon}</div>
-        <h2 className="text-lg font-semibold">{title}</h2>
+    <section className="rounded-lg border border-line/90 bg-panel p-4 shadow-deep sm:p-5">
+      <div className="mb-5 flex items-center gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-elevated text-aqua">{icon}</div>
+        <h2 className="text-base font-semibold text-slate-100">{title}</h2>
       </div>
       <div className="flex flex-col gap-4">{children}</div>
     </section>
@@ -614,11 +647,34 @@ function NumberField({ label, value, onChange, min, max }: { label: string; valu
   return (
     <label className="flex flex-col gap-2">
       <span className="text-sm font-semibold text-slate-300">{label}</span>
-      <input className="h-14 rounded-lg border border-line bg-canvas px-4 text-xl font-semibold text-slate-100 outline-none focus:border-aqua" inputMode="numeric" min={min} max={max} type="number" value={value} onChange={e => onChange(e.target.value)} />
+      <input className="h-14 rounded-lg border border-line bg-canvas px-4 text-xl font-semibold tabular-nums text-slate-100 outline-none focus:border-aqua" inputMode="numeric" min={min} max={max} type="number" value={value} onChange={e => onChange(e.target.value)} />
     </label>
   );
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
-  return <div className="min-w-0"><p className="text-slate-400">{label}</p><p className="mt-1 truncate font-semibold tabular-nums">{value}</p></div>;
+  return <div className="min-w-0 px-2"><p className="text-xs text-slate-500">{label}</p><p className="mt-1 truncate font-semibold tabular-nums text-slate-200">{value}</p></div>;
+}
+
+function GoalStat({ label, value, gap, target }: { label: string; value: number; gap: number; target: number }) {
+  const progress = target > 0 ? Math.min(100, Math.max(0, value / target * 100)) : 0;
+  return (
+    <div className="min-w-0 px-2 first:pl-0 last:pr-0">
+      <p className="text-xs text-white/45">{label}</p>
+      <p className="mt-1.5 text-xl font-semibold tabular-nums">{value.toFixed(1)}</p>
+      <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10">
+        <div className={`h-full rounded-full ${gap >= 0 ? "bg-emerald-400" : "bg-aqua"}`} style={{ width: `${progress}%` }} />
+      </div>
+      <p className={`mt-1.5 text-[11px] tabular-nums ${gap >= 0 ? "text-emerald-400" : "text-coral"}`}>{gap >= 0 ? "+" : ""}{gap.toFixed(1)} · 目标 {target.toFixed(0)}</p>
+    </div>
+  );
+}
+
+function ChartHeading({ title, meta }: { title: string; meta: string }) {
+  return (
+    <div className="flex items-center justify-between px-0.5">
+      <h3 className="text-sm font-semibold text-slate-300">{title}</h3>
+      <span className="text-xs text-slate-600">{meta}</span>
+    </div>
+  );
 }

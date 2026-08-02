@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, LogIn, UserPlus } from "lucide-react";
+import { ArrowLeft, LogIn, Sparkles, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -61,22 +61,29 @@ export default function LoginPage() {
   }
  
    return (
-     <main className="safe-bottom mx-auto flex min-h-screen w-full max-w-sm flex-col items-center justify-center gap-7 px-4 py-10">
+     <main className="safe-bottom mx-auto flex min-h-screen w-full max-w-sm flex-col items-center justify-center gap-8 px-4 py-10">
        <div className="text-center">
-         <h1 className="text-4xl font-semibold text-slate-50">欢愉值</h1>
-         <p className="mt-2 text-sm text-slate-400">时间银行</p>
+         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-lg border border-aqua/25 bg-aqua/10 text-aqua shadow-soft">
+           <Sparkles size={26} />
+         </div>
+         <h1 className="mt-5 text-3xl font-semibold text-slate-50">欢愉值时间银行</h1>
+         <p className="mt-2 text-sm text-slate-500">专注有回报，快乐有余额</p>
        </div>
  
        <form
          onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
-         className="flex w-full flex-col gap-5 rounded-lg border border-line bg-panel p-6 shadow-deep"
+         className="relative flex w-full flex-col gap-5 overflow-hidden rounded-lg border border-line bg-panel p-6 shadow-deep"
        >
-         <h2 className="text-lg font-semibold">{isSignUp ? "注册" : "登录"}</h2>
+         <div className="absolute inset-x-0 top-0 h-px bg-aqua/70" />
+         <div>
+           <h2 className="text-lg font-semibold text-slate-100">{isSignUp ? "创建账户" : "欢迎回来"}</h2>
+           <p className="mt-1 text-sm text-slate-500">{isSignUp ? "开始记录你的第一笔欢愉值" : "登录并继续今天的记录"}</p>
+         </div>
  
          <label className="flex flex-col gap-2 text-sm font-semibold text-slate-300">
            邮箱
            <input
-             className="h-12 rounded-lg border border-line bg-canvas px-4 text-slate-100 outline-none placeholder:text-slate-600 focus:border-aqua"
+             className="h-12 rounded-lg border border-line bg-canvas px-4 text-slate-100 outline-none placeholder:text-slate-700 focus:border-aqua"
              type="email"
              placeholder="you@example.com"
              value={email}
@@ -88,7 +95,7 @@ export default function LoginPage() {
          <label className="flex flex-col gap-2 text-sm font-semibold text-slate-300">
            密码
            <input
-             className="h-12 rounded-lg border border-line bg-canvas px-4 text-slate-100 outline-none placeholder:text-slate-600 focus:border-aqua"
+             className="h-12 rounded-lg border border-line bg-canvas px-4 text-slate-100 outline-none placeholder:text-slate-700 focus:border-aqua"
              type="password"
              placeholder="至少 6 位"
              value={password}
@@ -107,7 +114,7 @@ export default function LoginPage() {
                <button
                  type="submit"
                  disabled={busy}
-                 className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-aqua font-semibold text-white disabled:cursor-wait disabled:opacity-50"
+                 className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-aqua font-semibold text-canvas shadow-soft hover:brightness-110 disabled:cursor-wait disabled:opacity-50"
                >
                  <UserPlus size={18} /> {busy ? "注册中..." : "注册"}
                </button>
@@ -126,7 +133,7 @@ export default function LoginPage() {
                <button
                  type="submit"
                  disabled={busy}
-                 className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-aqua font-semibold text-white disabled:cursor-wait disabled:opacity-50"
+                 className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-aqua font-semibold text-canvas shadow-soft hover:brightness-110 disabled:cursor-wait disabled:opacity-50"
                >
                  <LogIn size={18} /> {busy ? "登录中..." : "登录"}
                </button>
